@@ -175,36 +175,30 @@ async function zapiszObecnosc(kodNfc) {
 
     setResult("Zapisywanie obecności...", "warning");
 
+    const url =
+        SCRIPT_URL +
+        "?kodNfc=" + encodeURIComponent(kodNfc) +
+        "&grupa=" + encodeURIComponent(grupa) +
+        "&t=" + Date.now();
+
     try {
-        const url =
-            SCRIPT_URL +
-            "?kodNfc=" + encodeURIComponent(kodNfc) +
-            "&grupa=" + encodeURIComponent(grupa);
+        await fetch(url, {
+            method: "GET",
+            mode: "no-cors"
+        });
 
-        const response = await fetch(url);
-        const data = await response.json();
+        beep();
 
-        if (data.status === "success") {
-            beep();
-
-            setResult(
-                "✅ WITAJ!<br><br>" +
-                "<strong>" + data.name + "</strong><br>" +
-                "Grupa: " + data.group +
-                "<br><br>Obecność zapisana.",
-                "success"
-            );
-        } else {
-            setResult(
-                "⚠️ " + (data.message || "Nie udało się zapisać obecności"),
-                "warning"
-            );
-        }
+        setResult(
+            "✅ WYSŁANO DO ARKUSZA<br><br>" +
+            "Kod: <strong>" + kodNfc + "</strong><br>" +
+            "Grupa: <strong>" + grupa + "</strong>",
+            "success"
+        );
 
     } catch (error) {
         setResult(
-            "❌ Skrypt zapisał dane, ale aplikacja nie odczytała odpowiedzi.<br><br>" +
-            "To oznacza, że Apps Script nie zwraca jeszcze JSON.",
+            "❌ Błąd wysyłki:<br>" + error.message,
             "error"
         );
     }
