@@ -3,101 +3,91 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KS Jerzyki - Rejestracja obecności</title>
+<title>KS Jerzyki - Odczyt NFC</title>
 
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1565c0">
 
 <style>
-    body {
-        font-family: Arial, Helvetica, sans-serif;
-        background-color: #f4f6f9;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        margin: 0;
-    }
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #f4f6f9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
 
-    .container {
-        text-align: center;
-        background: white;
-        padding: 40px;
-        border-radius: 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-        max-width: 500px;
-        width: 90%;
-    }
+.container {
+    text-align: center;
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    max-width: 500px;
+    width: 90%;
+}
 
-    .header {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 20px;
-        margin-bottom: 30px;
-    }
+.header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 30px;
+}
 
-    .header img {
-        width: 90px;
-        height: 90px;
-        object-fit: contain;
-    }
+.header img {
+    width: 90px;
+    height: 90px;
+    object-fit: contain;
+}
 
-    .header h1 {
-        font-size: 28px;
-        margin: 0;
-    }
+.header h1 {
+    font-size: 28px;
+    margin: 0;
+}
 
-    #scan {
-        width: 100%;
-        padding: 28px;
-        font-size: 32px;
-        font-weight: bold;
-        color: white;
-        background-color: #1565c0;
-        border: none;
-        border-radius: 18px;
-        cursor: pointer;
-        transition: 0.2s;
-    }
+#scan {
+    width: 100%;
+    padding: 28px;
+    font-size: 32px;
+    font-weight: bold;
+    color: white;
+    background-color: #1565c0;
+    border: none;
+    border-radius: 18px;
+    cursor: pointer;
+}
 
-    #scan:hover {
-        background-color: #0d47a1;
-        transform: scale(1.02);
-    }
+#result {
+    margin-top: 30px;
+    padding: 25px;
+    border: 2px dashed #bdbdbd;
+    border-radius: 12px;
+    font-size: 24px;
+    min-height: 80px;
+    background: #fafafa;
+    line-height: 1.4;
+}
 
-    #scan:active {
-        transform: scale(0.98);
-    }
+.success {
+    background: #e8f5e9 !important;
+    border-color: #2e7d32 !important;
+    color: #1b5e20;
+}
 
-    #result {
-        margin-top: 30px;
-        padding: 20px;
-        border: 2px dashed #bdbdbd;
-        border-radius: 12px;
-        font-size: 22px;
-        min-height: 60px;
-        background: #fafafa;
-        line-height: 1.4;
-    }
+.error {
+    background: #ffebee !important;
+    border-color: #c62828 !important;
+    color: #b71c1c;
+}
 
-    .success {
-        background: #e8f5e9 !important;
-        border-color: #2e7d32 !important;
-        color: #1b5e20;
-    }
-
-    .error {
-        background: #ffebee !important;
-        border-color: #c62828 !important;
-        color: #b71c1c;
-    }
-
-    .warning {
-        background: #fff8e1 !important;
-        border-color: #f9a825 !important;
-        color: #795548;
-    }
+.warning {
+    background: #fff8e1 !important;
+    border-color: #f9a825 !important;
+    color: #795548;
+}
 </style>
 </head>
 
@@ -110,23 +100,7 @@
         <h1>KS Jerzyki</h1>
     </div>
 
-    <select id="grupa" style="
-width:100%;
-padding:16px;
-font-size:24px;
-margin-bottom:20px;
-border-radius:12px;
-border:2px solid #1565c0;
-">
-    <option value="Dzieci">Dzieci</option>
-    <option value="Amatorzy">Amatorzy</option>
-    <option value="Karnet">Karnet</option>
-    <option value="Wejście jednorazowe">Wejście jednorazowe</option>
-    <option value="Turniej">Turniej</option>
-    <option value="Gość">Gość</option>
-</select>
-
-<button id="scan">SKANUJ KARTĘ</button>
+    <button id="scan">SKANUJ KARTĘ</button>
 
     <div id="result">
         Oczekiwanie na przyłożenie karty NFC...
@@ -135,11 +109,6 @@ border:2px solid #1565c0;
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyVmEqJ0FEgL1XkkyxX1svs-iyxm06We69t8E5WZw8lLsM22Eq_XLNmyhTAihoxFVGf/exec";
-
-let ostatniKod = "";
-let ostatniCzas = 0;
-
 function setResult(message, type = "") {
     const result = document.getElementById("result");
     result.className = "";
@@ -164,202 +133,18 @@ function beep() {
             oscillator.stop();
             audioCtx.close();
         }, 150);
-    } catch (e) {
-        // Brak dźwięku nie blokuje działania aplikacji
-    }
-}
-
-async function zapiszObecnosc(kodNfc) {
-
-    const grupa = document.getElementById("grupa").value;
-
-    setResult("Zapisywanie obecności...", "warning");
-
-    const url =
-        SCRIPT_URL +
-        "?kodNfc=" + encodeURIComponent(kodNfc) +
-        "&grupa=" + encodeURIComponent(grupa) +
-        "&t=" + Date.now();
-
-    try {
-        await fetch(url, {
-            method: "GET",
-            mode: "no-cors"
-        });
-
-        beep();
-
-        setResult(
-            "✅ WYSŁANO DO ARKUSZA<br><br>" +
-            "Kod: <strong>" + kodNfc + "</strong><br>" +
-            "Grupa: <strong>" + grupa + "</strong>",
-            "success"
-        );
-
-    } catch (error) {
-        setResult(
-            "❌ Błąd wysyłki:<br>" + error.message,
-            "error"
-        );
-    }
-}
-
-            if (
-                data.feeStatus &&
-                data.feeStatus.toLowerCase() !== "opłacona" &&
-                data.feeStatus.toLowerCase() !== "oplacona" &&
-                data.feeStatus.toLowerCase() !== "aktywny"
-            ) {
-                tekst += "<br><br>⚠️ Status: " + data.feeStatus;
-            }
-
-            tekst += "<br><br>Obecność zapisana.";
-
-            setResult(tekst, "success");
-        }
-
-        else if (data.status === "limit") {
-            setResult(
-                "❌ KARNET WYKORZYSTANY<br><br>" +
-                "<strong>" + data.name + "</strong><br>" +
-                "Limit: " + data.limit + "<br>" +
-                "Wykorzystano: " + data.used,
-                "error"
-            );
-        }
-
-        else if (data.status === "duplicate") {
-            setResult(
-                "ℹ️ OBECNOŚĆ JUŻ ZAPISANA<br><br>" +
-                "<strong>" + data.name + "</strong>",
-                "warning"
-            );
-        }
-
-        else if (data.status === "inactive") {
-            setResult(
-                "⚠️ ZAWODNIK NIEAKTYWNY<br><br>" +
-                "<strong>" + data.name + "</strong>",
-                "warning"
-            );
-        }
-
-        else {
-            setResult(
-                "❌ " + data.message + "<br><br>Kod: " + kodNfc,
-                "error"
-            );
-        }
-
-    } catch (error) {
-        setResult(
-            "❌ Błąd komunikacji z arkuszem:<br>" + error.message,
-            "error"
-        );
-    }
-}
-
-            if (
-                data.feeStatus &&
-                data.feeStatus.toLowerCase() !== "opłacona" &&
-                data.feeStatus.toLowerCase() !== "oplacona"
-            ) {
-                tekst += `<br><br>⚠️ ${data.feeStatus}`;
-            }
-
-            setResult(tekst, "success");
-
-        }
-        else if (data.status === "limit") {
-
-            setResult(
-                `❌ <b>KARNET WYKORZYSTANY</b><br><br>
-                 ${data.name}<br>
-                 Wykorzystano ${data.used} z ${data.limit} wejść`,
-                "error"
-            );
-
-        }
-        else if (data.status === "duplicate") {
-
-            setResult(
-                `ℹ️ ${data.name}<br><br>Dzisiejsza obecność została już zapisana.`,
-                "warning"
-            );
-
-        }
-        else if (data.status === "inactive") {
-
-            setResult(
-                `⚠️ ${data.name}<br><br>Zawodnik nieaktywny.`,
-                "warning"
-            );
-
-        }
-        else {
-
-            setResult(
-                `❌ ${data.message}`,
-                "error"
-            );
-
-        }
-
-    } catch (err) {
-
-        setResult(
-            "❌ Błąd komunikacji z serwerem",
-            "error"
-        );
-
-    }
-
-}
-
-        const data = await response.json();
-
-        if (data.status === "success") {
-            beep();
-
-            setResult(
-                "✅ OBECNOŚĆ ZAPISANA<br><br>" +
-                "<strong>" + data.name + "</strong><br>" +
-                "Grupa: " + data.group + "<br>" +
-                "Składka: " + data.feeStatus,
-                "success"
-            );
-        } else if (data.status === "inactive") {
-            setResult(
-                "⚠️ ZAWODNIK NIEAKTYWNY<br><br><strong>" +
-                data.name +
-                "</strong>",
-                "warning"
-            );
-        } else {
-            setResult(
-                "❌ " + data.message + "<br><br>Kod: " + kodNfc,
-                "error"
-            );
-        }
-
-    } catch (error) {
-        setResult(
-            "❌ Błąd zapisu do Google Sheets:<br>" + error.message,
-            "error"
-        );
-    }
+    } catch (e) {}
 }
 
 document.getElementById("scan").addEventListener("click", async () => {
 
     if (!("NDEFReader" in window)) {
-        setResult("Ta przeglądarka lub urządzenie nie obsługuje NFC.", "error");
+        setResult("❌ To urządzenie lub przeglądarka nie obsługuje NFC.", "error");
         return;
     }
 
     try {
         const ndef = new NDEFReader();
-
         await ndef.scan();
 
         setResult("Przyłóż kartę do telefonu...", "warning");
@@ -373,28 +158,20 @@ document.getElementById("scan").addEventListener("click", async () => {
             }
 
             if (!odczyt) {
-                setResult("❌ Nie udało się odczytać kodu z karty.", "error");
+                setResult("❌ Nie udało się odczytać danych z karty.", "error");
                 return;
             }
 
-            const teraz = Date.now();
+            beep();
 
-            if (odczyt === ostatniKod && (teraz - ostatniCzas) < 30000) {
-                setResult(
-                    "⚠️ Ta karta została już przed chwilą zeskanowana.<br><br>Kod: " + odczyt,
-                    "warning"
-                );
-                return;
-            }
-
-            ostatniKod = odczyt;
-            ostatniCzas = teraz;
-
-            zapiszObecnosc(odczyt);
+            setResult(
+                "✅ ODCZYTANO KARTĘ<br><br><strong>" + odczyt + "</strong>",
+                "success"
+            );
         };
 
     } catch (err) {
-        setResult("Błąd podczas skanowania:<br>" + err.message, "error");
+        setResult("❌ Błąd skanowania:<br>" + err.message, "error");
     }
 });
 </script>
