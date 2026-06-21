@@ -120,6 +120,10 @@ border:2px solid #1565c0;
 ">
     <option value="Dzieci">Dzieci</option>
     <option value="Amatorzy">Amatorzy</option>
+    <option value="Karnet">Karnet</option>
+    <option value="Wejście jednorazowe">Wejście jednorazowe</option>
+    <option value="Turniej">Turniej</option>
+    <option value="Gość">Gość</option>
 </select>
 
 <button id="scan">SKANUJ KARTĘ</button>
@@ -172,28 +176,94 @@ async function zapiszObecnosc(kodNfc) {
     setResult("Zapisywanie obecności...", "warning");
 
     try {
-
-        const response = await fetch(
+        const url =
             SCRIPT_URL +
             "?kodNfc=" + encodeURIComponent(kodNfc) +
-            "&grupa=" + encodeURIComponent(grupa)
-        );
+            "&grupa=" + encodeURIComponent(grupa);
 
+        const response = await fetch(url);
         const data = await response.json();
 
         if (data.status === "success") {
-
             beep();
 
-            let tekst = `
-                ✅ <b>OBECNOŚĆ ZAPISANA</b><br><br>
-                <b>${data.name}</b><br>
-                Grupa: ${data.group}
-            `;
+            setResult(
+                "✅ WITAJ!<br><br>" +
+                "<strong>" + data.name + "</strong><br>" +
+                "Grupa: " + data.group +
+                "<br><br>Obecność zapisana.",
+                "success"
+            );
+        } else {
+            setResult(
+                "⚠️ " + (data.message || "Nie udało się zapisać obecności"),
+                "warning"
+            );
+        }
 
-            if (data.entryType === "Karnet") {
-                tekst += `<br>Pozostało wejść: ${data.limit - data.used}`;
+    } catch (error) {
+        setResult(
+            "❌ Skrypt zapisał dane, ale aplikacja nie odczytała odpowiedzi.<br><br>" +
+            "To oznacza, że Apps Script nie zwraca jeszcze JSON.",
+            "error"
+        );
+    }
+}
+
+            if (
+                data.feeStatus &&
+                data.feeStatus.toLowerCase() !== "opłacona" &&
+                data.feeStatus.toLowerCase() !== "oplacona" &&
+                data.feeStatus.toLowerCase() !== "aktywny"
+            ) {
+                tekst += "<br><br>⚠️ Status: " + data.feeStatus;
             }
+
+            tekst += "<br><br>Obecność zapisana.";
+
+            setResult(tekst, "success");
+        }
+
+        else if (data.status === "limit") {
+            setResult(
+                "❌ KARNET WYKORZYSTANY<br><br>" +
+                "<strong>" + data.name + "</strong><br>" +
+                "Limit: " + data.limit + "<br>" +
+                "Wykorzystano: " + data.used,
+                "error"
+            );
+        }
+
+        else if (data.status === "duplicate") {
+            setResult(
+                "ℹ️ OBECNOŚĆ JUŻ ZAPISANA<br><br>" +
+                "<strong>" + data.name + "</strong>",
+                "warning"
+            );
+        }
+
+        else if (data.status === "inactive") {
+            setResult(
+                "⚠️ ZAWODNIK NIEAKTYWNY<br><br>" +
+                "<strong>" + data.name + "</strong>",
+                "warning"
+            );
+        }
+
+        else {
+            setResult(
+                "❌ " + data.message + "<br><br>Kod: " + kodNfc,
+                "error"
+            );
+        }
+
+    } catch (error) {
+        setResult(
+            "❌ Błąd komunikacji z arkuszem:<br>" + error.message,
+            "error"
+        );
+    }
+}
 
             if (
                 data.feeStatus &&
