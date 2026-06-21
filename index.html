@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KS Jerzyki - Rejestracja obecności</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1565c0">
+
+<style>
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        background-color: #f4f6f9;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+    }
+
+    .container {
+        text-align: center;
+        background: white;
+        padding: 40px;
+        border-radius: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        max-width: 500px;
+        width: 90%;
+    }
+
+    .header {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .header img {
+        width: 90px;
+        height: 90px;
+        object-fit: contain;
+    }
+
+    .header h1 {
+        font-size: 28px;
+        margin: 0;
+    }
+
+    #scan {
+        width: 100%;
+        padding: 28px;
+        font-size: 32px;
+        font-weight: bold;
+        color: white;
+        background-color: #1565c0;
+        border: none;
+        border-radius: 18px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    #scan:hover {
+        background-color: #0d47a1;
+        transform: scale(1.02);
+    }
+
+    #scan:active {
+        transform: scale(0.98);
+    }
+
+    #result {
+        margin-top: 30px;
+        padding: 20px;
+        border: 2px dashed #bdbdbd;
+        border-radius: 12px;
+        font-size: 22px;
+        min-height: 60px;
+        background: #fafafa;
+        line-height: 1.4;
+    }
+
+    .success {
+        background: #e8f5e9 !important;
+        border-color: #2e7d32 !important;
+        color: #1b5e20;
+    }
+
+    .error {
+        background: #ffebee !important;
+        border-color: #c62828 !important;
+        color: #b71c1c;
+    }
+
+    .warning {
+        background: #fff8e1 !important;
+        border-color: #f9a825 !important;
+        color: #795548;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <img src="logo-ks-jerzyki.png" alt="Logo KS Jerzyki">
+        <h1>KS Jerzyki</h1>
+    </div>
+
+    <button id="scan">SKANUJ KARTĘ</button>
+
+    <div id="result">
+        Oczekiwanie na przyłożenie karty NFC...
+    </div>
+
+</div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyVmEqJ0FEgL1XkkyxX1svs-iyxm06We69t8E5WZw8lLsM22Eq_XLNmyhTAihoxFVGf/exec";
+
+let ostatniKod = "";
+let ostatniCzas = 0;
+
+function setResult(message, type = "") {
+    const result = document.getElementById("result");
+    result.className = "";
+    if (type) result.classList.add(type);
+    result.innerHTML = message;
+}
+
+function beep() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        oscillator.frequency.value = 880;
+        gainNode.gain.value = 0.1;
+
+        oscillator.start();
+        setTimeout(() => {
+            oscillator.stop();
+            audioCtx.close();
+        }, 150);
+    } catch (e) {
+        // Brak dźwięku nie blokuje działania aplikacji
+    }
+}
+
+async function zapiszObecnosc(kodNfc) {
+    setResult("Zapisywanie obecności...", "warning");
+
+    try {
+        const response = await fetch(SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify({
+                kodNfc: kodNfc
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.status === "success") {
+            beep();
+
+            setResult(
+                "✅ OBECNOŚĆ ZAPISANA<br><br>" +
+                "<strong>" + data.name + "</strong><br>" +
+                "Grupa: " + data.group + "<br>" +
+                "Składka: " + data.feeStatus,
+                "success"
+            );
+        } else if (data.status === "inactive") {
+            setResult(
+                "⚠️ ZAWODNIK NIEAKTYWNY<br><br><strong>" +
+                data.name +
+                "</strong>",
+                "warning"
+            );
+        } else {
+            setResult(
+                "❌ " + data.message + "<br><br>Kod: " + kodNfc,
+                "error"
+            );
+        }
+
+    } catch (error) {
+        setResult(
+            "❌ Błąd zapisu do Google Sheets:<br>" + error.message,
+            "error"
+        );
+    }
+}
+
+document.getElementById("scan").addEventListener("click", async () => {
+
+    if (!("NDEFReader" in window)) {
+        setResult("Ta przeglądarka lub urządzenie nie obsługuje NFC.", "error");
+        return;
+    }
+
+    try {
+        const ndef = new NDEFReader();
+
+        await ndef.scan();
+
+        setResult("Przyłóż kartę do telefonu...", "warning");
+
+        ndef.onreading = event => {
+            const decoder = new TextDecoder();
+            let odczyt = "";
+
+            for (const record of event.message.records) {
+                odczyt = decoder.decode(record.data).trim();
+            }
+
+            if (!odczyt) {
+                setResult("❌ Nie udało się odczytać kodu z karty.", "error");
+                return;
+            }
+
+            const teraz = Date.now();
+
+            if (odczyt === ostatniKod && (teraz - ostatniCzas) < 30000) {
+                setResult(
+                    "⚠️ Ta karta została już przed chwilą zeskanowana.<br><br>Kod: " + odczyt,
+                    "warning"
+                );
+                return;
+            }
+
+            ostatniKod = odczyt;
+            ostatniCzas = teraz;
+
+            zapiszObecnosc(odczyt);
+        };
+
+    } catch (err) {
+        setResult("Błąd podczas skanowania:<br>" + err.message, "error");
+    }
+});
+</script>
+
+</body>
+</html>
