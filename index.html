@@ -110,7 +110,19 @@
         <h1>KS Jerzyki</h1>
     </div>
 
-    <button id="scan">SKANUJ KARTĘ</button>
+    <select id="grupa" style="
+width:100%;
+padding:16px;
+font-size:24px;
+margin-bottom:20px;
+border-radius:12px;
+border:2px solid #1565c0;
+">
+    <option value="Dzieci">Dzieci</option>
+    <option value="Amatorzy">Amatorzy</option>
+</select>
+
+<button id="scan">SKANUJ KARTĘ</button>
 
     <div id="result">
         Oczekiwanie na przyłożenie karty NFC...
@@ -154,15 +166,91 @@ function beep() {
 }
 
 async function zapiszObecnosc(kodNfc) {
+
+    const grupa = document.getElementById("grupa").value;
+
     setResult("Zapisywanie obecności...", "warning");
 
     try {
-        const response = await fetch(SCRIPT_URL, {
-            method: "POST",
-            body: JSON.stringify({
-                kodNfc: kodNfc
-            })
-        });
+
+        const response = await fetch(
+            SCRIPT_URL +
+            "?kodNfc=" + encodeURIComponent(kodNfc) +
+            "&grupa=" + encodeURIComponent(grupa)
+        );
+
+        const data = await response.json();
+
+        if (data.status === "success") {
+
+            beep();
+
+            let tekst = `
+                ✅ <b>OBECNOŚĆ ZAPISANA</b><br><br>
+                <b>${data.name}</b><br>
+                Grupa: ${data.group}
+            `;
+
+            if (data.entryType === "Karnet") {
+                tekst += `<br>Pozostało wejść: ${data.limit - data.used}`;
+            }
+
+            if (
+                data.feeStatus &&
+                data.feeStatus.toLowerCase() !== "opłacona" &&
+                data.feeStatus.toLowerCase() !== "oplacona"
+            ) {
+                tekst += `<br><br>⚠️ ${data.feeStatus}`;
+            }
+
+            setResult(tekst, "success");
+
+        }
+        else if (data.status === "limit") {
+
+            setResult(
+                `❌ <b>KARNET WYKORZYSTANY</b><br><br>
+                 ${data.name}<br>
+                 Wykorzystano ${data.used} z ${data.limit} wejść`,
+                "error"
+            );
+
+        }
+        else if (data.status === "duplicate") {
+
+            setResult(
+                `ℹ️ ${data.name}<br><br>Dzisiejsza obecność została już zapisana.`,
+                "warning"
+            );
+
+        }
+        else if (data.status === "inactive") {
+
+            setResult(
+                `⚠️ ${data.name}<br><br>Zawodnik nieaktywny.`,
+                "warning"
+            );
+
+        }
+        else {
+
+            setResult(
+                `❌ ${data.message}`,
+                "error"
+            );
+
+        }
+
+    } catch (err) {
+
+        setResult(
+            "❌ Błąd komunikacji z serwerem",
+            "error"
+        );
+
+    }
+
+}
 
         const data = await response.json();
 
