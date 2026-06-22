@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KS Jerzyki - Odczyt NFC</title>
+<title>KS Jerzyki - Rejestracja NFC</title>
 
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1565c0">
@@ -109,6 +109,8 @@ body {
 </div>
 
 <script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyVmEqJ0FEgL1XkkyxX1svs-iyxm06We69t8E5WZw8lLsM22Eq_XLNmyhTAihoxFVGf/exec";
+
 function setResult(message, type = "") {
     const result = document.getElementById("result");
     result.className = "";
@@ -136,6 +138,30 @@ function beep() {
     } catch (e) {}
 }
 
+async function zapiszDoArkusza(kodNfc) {
+    const url = SCRIPT_URL + "?kodNfc=" + encodeURIComponent(kodNfc) + "&t=" + Date.now();
+
+    try {
+        await fetch(url, {
+            method: "GET",
+            mode: "no-cors"
+        });
+
+        beep();
+
+        setResult(
+            "✅ ODCZYTANO I WYSŁANO DO ARKUSZA<br><br><strong>" + kodNfc + "</strong>",
+            "success"
+        );
+
+    } catch (error) {
+        setResult(
+            "❌ Błąd wysyłki do arkusza:<br>" + error.message,
+            "error"
+        );
+    }
+}
+
 document.getElementById("scan").addEventListener("click", async () => {
 
     if (!("NDEFReader" in window)) {
@@ -145,6 +171,7 @@ document.getElementById("scan").addEventListener("click", async () => {
 
     try {
         const ndef = new NDEFReader();
+
         await ndef.scan();
 
         setResult("Przyłóż kartę do telefonu...", "warning");
@@ -162,12 +189,7 @@ document.getElementById("scan").addEventListener("click", async () => {
                 return;
             }
 
-            beep();
-
-            setResult(
-                "✅ ODCZYTANO KARTĘ<br><br><strong>" + odczyt + "</strong>",
-                "success"
-            );
+            zapiszDoArkusza(odczyt);
         };
 
     } catch (err) {
