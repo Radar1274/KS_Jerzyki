@@ -153,50 +153,25 @@ function beep() {
 
 function zapiszDoArkusza(kodNfc) {
 
-    const form = document.createElement("form");
-    form.method = "GET";
-    form.action = SCRIPT_URL;
-    form.target = "sendFrame";
+    function zapiszDoArkusza(kodNfc) {
 
-    const inputKod = document.createElement("input");
-    inputKod.type = "hidden";
-    inputKod.name = "kodNfc";
-    inputKod.value = kodNfc;
-
-    const inputTime = document.createElement("input");
-    inputTime.type = "hidden";
-    inputTime.name = "t";
-    inputTime.value = Date.now();
-
-    form.appendChild(inputKod);
-    form.appendChild(inputTime);
-
-    document.body.appendChild(form);
-
-    form.submit();
-
-    document.body.removeChild(form);
+    const url = SCRIPT_URL +
+        "?kodNfc=" + encodeURIComponent(kodNfc) +
+        "&t=" + Date.now();
 
     beep();
 
     setResult(
         "✅ KARTA ODCZYTANA<br><br><strong>" +
         kodNfc +
-        "</strong><br><br>Wysłano do systemu.",
+        "</strong><br><br>Przekierowuję zapis do arkusza...",
         "success"
     );
+
+    setTimeout(() => {
+        window.location.href = url;
+    }, 800);
 }
-
-document.getElementById("scan").addEventListener("click", async () => {
-
-    if (!("NDEFReader" in window)) {
-
-        setResult(
-            "❌ To urządzenie lub przeglądarka nie obsługuje NFC.",
-            "error"
-        );
-
-        return;
     }
 
     try {
