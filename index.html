@@ -60,6 +60,10 @@ body {
     cursor: pointer;
 }
 
+#scan:hover {
+    background-color: #0d47a1;
+}
+
 #result {
     margin-top: 30px;
     padding: 25px;
@@ -108,9 +112,11 @@ body {
 
 </div>
 
+<iframe id="sendFrame" name="sendFrame" style="display:none;"></iframe>
+
 <script>
 
-const SCRIPT_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnQvO6bfSQLHDLD-bi8LPQCaDTrggRMIL9qIuP4_xq4trFgV_736ZpyDjkzzZJyEnoxYKu0FUbA7pMutDJvuMx2YWoX5yg8LUA-2bVYp9RUbXS5CxLJXd00-i1GowPJr8Yi4qgWvNiAocIAZ9fOsdcyYjRUzWCQCPKaYTvs7-0Drl99egutI89J9Idq_Itc1L0Pzou3txIJlOPVcTEKeOclTa9wkujYgzaUl2J0vyfw73O_Uyly0NRH60rY932OGkyu4HdxkSQeZNrWF5w12TNwlaJ1prQ&lib=MUm08-ApXqFYUrjHCMW5FtyuhMqpg5Jk9";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyVmEqJ0FEgL1XkkyxX1svs-iyxm06We69t8E5WZw8lLsM22Eq_XLNmyhTAihoxFVGf/exec";
 
 function setResult(message, type = "") {
     const result = document.getElementById("result");
@@ -145,36 +151,40 @@ function beep() {
     } catch (e) {}
 }
 
-async function zapiszDoArkusza(kodNfc) {
+function zapiszDoArkusza(kodNfc) {
 
-    const url = SCRIPT_URL +
-        "?kodNfc=" + encodeURIComponent(kodNfc) +
-        "&t=" + Date.now();
+    const form = document.createElement("form");
+    form.method = "GET";
+    form.action = SCRIPT_URL;
+    form.target = "sendFrame";
 
-    try {
+    const inputKod = document.createElement("input");
+    inputKod.type = "hidden";
+    inputKod.name = "kodNfc";
+    inputKod.value = kodNfc;
 
-        await fetch(url, {
-            method: "GET",
-            mode: "no-cors"
-        });
+    const inputTime = document.createElement("input");
+    inputTime.type = "hidden";
+    inputTime.name = "t";
+    inputTime.value = Date.now();
 
-        beep();
+    form.appendChild(inputKod);
+    form.appendChild(inputTime);
 
-        setResult(
-            "✅ KARTA ODCZYTANA<br><br><strong>" +
-            kodNfc +
-            "</strong><br><br>Obecność wysłana do systemu.",
-            "success"
-        );
+    document.body.appendChild(form);
 
-    } catch (error) {
+    form.submit();
 
-        setResult(
-            "❌ Błąd wysyłki:<br>" +
-            error.message,
-            "error"
-        );
-    }
+    document.body.removeChild(form);
+
+    beep();
+
+    setResult(
+        "✅ KARTA ODCZYTANA<br><br><strong>" +
+        kodNfc +
+        "</strong><br><br>Wysłano do systemu.",
+        "success"
+    );
 }
 
 document.getElementById("scan").addEventListener("click", async () => {
@@ -203,7 +213,6 @@ document.getElementById("scan").addEventListener("click", async () => {
         ndef.onreading = event => {
 
             const decoder = new TextDecoder();
-
             let odczyt = "";
 
             for (const record of event.message.records) {
