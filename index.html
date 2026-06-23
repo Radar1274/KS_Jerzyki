@@ -108,11 +108,18 @@ body {
 
 </div>
 
+<script>
+
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyVmEqJ0FEgL1XkkyxX1svs-iyxm06We69t8E5WZw8lLsM22Eq_XLNmyhTAihoxFVGf/exec";
+
 function setResult(message, type = "") {
     const result = document.getElementById("result");
     result.className = "";
-    if (type) result.classList.add(type);
+
+    if (type) {
+        result.classList.add(type);
+    }
+
     result.innerHTML = message;
 }
 
@@ -129,17 +136,23 @@ function beep() {
         gainNode.gain.value = 0.1;
 
         oscillator.start();
+
         setTimeout(() => {
             oscillator.stop();
             audioCtx.close();
         }, 150);
+
     } catch (e) {}
 }
 
 async function zapiszDoArkusza(kodNfc) {
-    const url = SCRIPT_URL + "?kodNfc=" + encodeURIComponent(kodNfc) + "&t=" + Date.now();
+
+    const url = SCRIPT_URL +
+        "?kodNfc=" + encodeURIComponent(kodNfc) +
+        "&t=" + Date.now();
 
     try {
+
         await fetch(url, {
             method: "GET",
             mode: "no-cors"
@@ -148,13 +161,17 @@ async function zapiszDoArkusza(kodNfc) {
         beep();
 
         setResult(
-            "✅ ODCZYTANO I WYSŁANO DO ARKUSZA<br><br><strong>" + kodNfc + "</strong>",
+            "✅ KARTA ODCZYTANA<br><br><strong>" +
+            kodNfc +
+            "</strong><br><br>Obecność wysłana do systemu.",
             "success"
         );
 
     } catch (error) {
+
         setResult(
-            "❌ Błąd wysyłki do arkusza:<br>" + error.message,
+            "❌ Błąd wysyłki:<br>" +
+            error.message,
             "error"
         );
     }
@@ -163,19 +180,30 @@ async function zapiszDoArkusza(kodNfc) {
 document.getElementById("scan").addEventListener("click", async () => {
 
     if (!("NDEFReader" in window)) {
-        setResult("❌ To urządzenie lub przeglądarka nie obsługuje NFC.", "error");
+
+        setResult(
+            "❌ To urządzenie lub przeglądarka nie obsługuje NFC.",
+            "error"
+        );
+
         return;
     }
 
     try {
+
         const ndef = new NDEFReader();
 
         await ndef.scan();
 
-        setResult("Przyłóż kartę do telefonu...", "warning");
+        setResult(
+            "Przyłóż kartę do telefonu...",
+            "warning"
+        );
 
         ndef.onreading = event => {
+
             const decoder = new TextDecoder();
+
             let odczyt = "";
 
             for (const record of event.message.records) {
@@ -183,7 +211,12 @@ document.getElementById("scan").addEventListener("click", async () => {
             }
 
             if (!odczyt) {
-                setResult("❌ Nie udało się odczytać danych z karty.", "error");
+
+                setResult(
+                    "❌ Nie udało się odczytać danych z karty.",
+                    "error"
+                );
+
                 return;
             }
 
@@ -191,9 +224,14 @@ document.getElementById("scan").addEventListener("click", async () => {
         };
 
     } catch (err) {
-        setResult("❌ Błąd skanowania:<br>" + err.message, "error");
+
+        setResult(
+            "❌ Błąd skanowania:<br>" + err.message,
+            "error"
+        );
     }
 });
+
 </script>
 
 </body>
